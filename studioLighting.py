@@ -51,7 +51,7 @@ class StudioLightingWidget(MayaQWidgetDockableMixin, QtWidgets.QMainWindow):
             pm.delete('studioBackdrop')
 
         # Create mesh
-        self.backdrop = pm.polyPlane(n='studioBackdrop', w=20, h=20, sw=2, sh=2)
+        pm.polyPlane(n='studioBackdrop', w=20, h=20, sw=2, sh=2)
         pm.polyExtrudeEdge('studioBackdrop.e[0]', 'studioBackdrop.e[2]', kft=True, lt=(0, 5, 5))
         pm.polyExtrudeEdge('studioBackdrop.e[14]', 'studioBackdrop.e[17]', kft=True, lt=(0, 5, 5))
         pm.rotate('studioBackdrop', [0, 180, 0])
@@ -63,10 +63,12 @@ class StudioLightingWidget(MayaQWidgetDockableMixin, QtWidgets.QMainWindow):
         pm.delete(constructionHistory=True)
         pm.select(clear=True)
 
-        self.add_backdrop_widget(backdrop=self.backdrop)
+        self.add_backdrop_widget()
+        self.btn_add_backdrop.setText("Reset backdrop")
 
     def add_camera(self):
         self.camera = pm.camera(position=(0, 4, 8), aspectRatio=0.66)
+        self.btn_add_cam.setText("Reset camera")
 
     def add_lights(self):
         # Delete any existing lights
@@ -106,12 +108,14 @@ class StudioLightingWidget(MayaQWidgetDockableMixin, QtWidgets.QMainWindow):
         self.back_light.getTransform().rotateY.set(45)
         self.add_light_widget(light=self.back_light, name="Back Light")
 
+        self.btn_add_lights.setText("Reset lights")
+
     def add_light_widget(self, light, name):
         widget = LightWidget(light, name)
         self.scroll_layout.addWidget(widget)
 
-    def add_backdrop_widget(self, backdrop):
-        widget = BackdropWidget(backdrop)
+    def add_backdrop_widget(self):
+        widget = BackdropWidget()
         self.scroll_layout.addWidget(widget)
 
 
@@ -143,6 +147,8 @@ class LightWidget(QtWidgets.QFrame):
         self.set_btn_color()
         color_layout.addWidget(self.btn_color)
 
+        layout.addWidget(color_widget)
+
         # UI - Intensity
         intensity_widget = QtWidgets.QWidget()
         intensity_layout = QtWidgets.QHBoxLayout(intensity_widget)
@@ -153,12 +159,14 @@ class LightWidget(QtWidgets.QFrame):
 
         slider_intensity = QtWidgets.QSlider(QtCore.Qt.Horizontal)
         slider_intensity.setMinimum(1)
-        slider_intensity.setMaximum(1000)
+        slider_intensity.setMaximum(100)
         slider_intensity.setValue(self.light.intensity.get())
         slider_intensity.valueChanged.connect(lambda val: self.light.intensity.set(val))
         intensity_layout.addWidget(slider_intensity)
 
-        # UI - Toggle visibility
+        layout.addWidget(intensity_widget)
+
+        # UI - Toggle visibility and light link
         toggles_widget = QtWidgets.QWidget()
         toggles_layout = QtWidgets.QVBoxLayout(toggles_widget)
 
@@ -167,14 +175,11 @@ class LightWidget(QtWidgets.QFrame):
         toggle_visibility.toggled.connect(lambda val: self.light.getTransform().visibility.set(val))
         toggles_layout.addWidget(toggle_visibility)
 
-        # UI - Toggle illuminate backdrop
         toggle_link = QtWidgets.QCheckBox('Illuminate backdrop (in render)')
         toggle_link.setChecked(self.isLinkedToBackdrop)
         toggle_link.toggled.connect(lambda val: self.update_lightlink(val))
         toggles_layout.addWidget(toggle_link)
 
-        layout.addWidget(color_widget)
-        layout.addWidget(intensity_widget)
         layout.addWidget(toggles_widget)
 
     def update_lightlink(self, val):
@@ -191,6 +196,9 @@ class LightWidget(QtWidgets.QFrame):
                 pm.lightlink(b=True, light=light_name, object='studioBackdrop')
 
     def update_color(self):
+        """
+        Open color editor and update light color
+        """
         light_color = self.light.color.get()
         color = pm.colorEditor(rgbValue=light_color)
         r, g, b, a = [float(c) for c in color.split()]
@@ -200,6 +208,7 @@ class LightWidget(QtWidgets.QFrame):
 
     def set_btn_color(self, color=None):
         """
+        Update button color
         :param color: tuple with RGB values
         :type color: tuple
         """
@@ -214,13 +223,17 @@ class BackdropWidget(QtWidgets.QFrame):
     """
     Control backdrop in the scene
     """
-    def __init__(self, backdrop):
+    def __init__(self):
         super(BackdropWidget, self).__init__()
-        self.backdrop = backdrop
+        self.backdrop = pm.PyNode('studioBackdrop')
+
+        self.mesh = pm.listRelatives(self.backdrop, shapes=True)[0]
+        self.shading_engine = pm.listConnections(self.mesh, type="shadingEngine")[0]
+        self.material = pm.listConnections(self.shading_engine + ".surfaceShader")[0]
 
         # UI
         layout = QtWidgets.QVBoxLayout(self)
-        self.setStyleSheet("QFrame { border: 1px solid black; border-radius: 8px; }")
+        self.setStyleSheet("QFrame { border: 1px solid black; border-radius: 8px; max-height: 60px; }")
 
         # UI - Color and Name
         color_widget = QtWidgets.QWidget()
@@ -231,12 +244,33 @@ class BackdropWidget(QtWidgets.QFrame):
         label.setStyleSheet("font-size: 16px")
         color_layout.addWidget(label)
 
-        # self.btn_color = QtWidgets.QPushButton()
-        # self.btn_color.clicked.connect(self.update_color)
-        # self.set_btn_color()
-        # color_layout.addWidget(self.btn_color)
+        self.btn_color = QtWidgets.QPushButton()
+        self.btn_color.clicked.connect(self.update_color)
+        color = pm.getAttr(self.material + '.color')
+        self.set_btn_color(color)
+        color_layout.addWidget(self.btn_color)
 
         layout.addWidget(color_widget)
+
+    def update_color(self):
+        """
+        Open color editor and update backdrop color
+        """
+        color = pm.colorEditor()
+        r, g, b, a = [float(c) for c in color.split()]
+        pm.setAttr(self.material + '.color', r, g, b)
+        color = (r, g, b)
+        self.set_btn_color(color)
+
+    def set_btn_color(self, color=(0.5, 0.5, 0.5)):
+        """
+        Update button color
+        :param color: tuple with RGB values
+        :type color: tuple
+        """
+        if len(color) == 3:
+            r, g, b = [c * 255 for c in color]
+            self.btn_color.setStyleSheet('background-color: rgba({0}, {1}, {2}, 1.0)'.format(r, g, b))
 
 
 def show_ui():
