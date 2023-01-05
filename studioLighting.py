@@ -332,8 +332,6 @@ class CameraWidget(QtWidgets.QFrame):
         self.focal_length_label.setText('Focal Length\n({}mm)'.format(str(val)))
 
 
-
-def show_ui():
-    ui = StudioLightingWidget()  # Create instance of widget
-    ui.resize(300, 500)
-    ui.show(dockable=True, floating=True)
+ui = StudioLightingWidget()  # Create instance of widget
+ui.resize(300, 500)
+ui.show(dockable=True, floating=True)
