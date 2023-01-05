@@ -72,6 +72,7 @@ class StudioLightingWidget(MayaQWidgetDockableMixin, QtWidgets.QMainWindow):
             pm.delete('studioCamera1')
 
         self.camera = pm.camera(n="studioCamera1", position=(0, 4, 8), aspectRatio=0.66, )
+        self.add_camera_widget()
         self.btn_add_cam.setEnabled(False)  # setText("Reset camera")
 
     def add_lights(self):
@@ -120,6 +121,10 @@ class StudioLightingWidget(MayaQWidgetDockableMixin, QtWidgets.QMainWindow):
 
     def add_backdrop_widget(self):
         widget = BackdropWidget()
+        self.scroll_layout.addWidget(widget)
+
+    def add_camera_widget(self):
+        widget = CameraWidget()
         self.scroll_layout.addWidget(widget)
 
 
@@ -275,6 +280,57 @@ class BackdropWidget(QtWidgets.QFrame):
         if len(color) == 3:
             r, g, b = [c * 255 for c in color]
             self.btn_color.setStyleSheet('background-color: rgba({0}, {1}, {2}, 1.0)'.format(r, g, b))
+
+
+class CameraWidget(QtWidgets.QFrame):
+    """
+    Adjust camera in the scene
+    """
+    def __init__(self):
+        super(CameraWidget, self).__init__()
+        self.camera = pm.PyNode('studioCamera1')
+        focal_length = pm.camera(self.camera, q=True, fl=True)
+
+        # UI
+        layout = QtWidgets.QVBoxLayout(self)
+        self.setStyleSheet("QFrame { border: 1px solid black; border-radius: 8px; }")
+
+        # UI - Name
+        name_widget = QtWidgets.QWidget()
+        name_layout = QtWidgets.QHBoxLayout(name_widget)
+        name_widget.setStyleSheet("QLabel { border: none }")
+
+        label = QtWidgets.QLabel('Camera')
+        label.setStyleSheet("font-size: 16px")
+        name_layout.addWidget(label)
+
+        layout.addWidget(name_widget)
+
+        # UI - Focal Length
+        focal_length_widget = QtWidgets.QWidget()
+        focal_length_layout = QtWidgets.QHBoxLayout(focal_length_widget)
+        focal_length_widget.setStyleSheet("QLabel { border: none }")
+
+        self.focal_length_label = QtWidgets.QLabel('Focal Length\n({}mm)'.format(str(focal_length)))
+        focal_length_layout.addWidget(self.focal_length_label)
+
+        slider_focal_length = QtWidgets.QSlider(QtCore.Qt.Horizontal)
+        slider_focal_length.setMinimum(10)
+        slider_focal_length.setMaximum(500)
+        slider_focal_length.setValue(focal_length)
+        slider_focal_length.valueChanged.connect(self.update_focal_length)
+        focal_length_layout.addWidget(slider_focal_length)
+
+        layout.addWidget(focal_length_widget)
+
+    def update_focal_length(self, val):
+        """
+        :param val: focal length (mm)
+        :type val: int
+        """
+        pm.camera(self.camera, e=True, fl=val)
+        self.focal_length_label.setText('Focal Length\n({}mm)'.format(str(val)))
+
 
 
 def show_ui():
