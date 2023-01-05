@@ -64,11 +64,15 @@ class StudioLightingWidget(MayaQWidgetDockableMixin, QtWidgets.QMainWindow):
         pm.select(clear=True)
 
         self.add_backdrop_widget()
-        self.btn_add_backdrop.setText("Reset backdrop")
+        self.btn_add_backdrop.setEnabled(False)  # .setText("Reset backdrop")
 
     def add_camera(self):
-        self.camera = pm.camera(position=(0, 4, 8), aspectRatio=0.66)
-        self.btn_add_cam.setText("Reset camera")
+        # Delete any existing backdrop
+        if pm.objExists('studioCamera1'):
+            pm.delete('studioCamera1')
+
+        self.camera = pm.camera(n="studioCamera1", position=(0, 4, 8), aspectRatio=0.66, )
+        self.btn_add_cam.setEnabled(False)  # setText("Reset camera")
 
     def add_lights(self):
         # Delete any existing lights
@@ -108,7 +112,7 @@ class StudioLightingWidget(MayaQWidgetDockableMixin, QtWidgets.QMainWindow):
         self.back_light.getTransform().rotateY.set(45)
         self.add_light_widget(light=self.back_light, name="Back Light")
 
-        self.btn_add_lights.setText("Reset lights")
+        self.btn_add_lights.setEnabled(False)  # .setText("Reset lights")
 
     def add_light_widget(self, light, name):
         widget = LightWidget(light, name)
