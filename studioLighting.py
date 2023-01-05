@@ -71,7 +71,7 @@ class StudioLightingWidget(MayaQWidgetDockableMixin, QtWidgets.QMainWindow):
         if pm.objExists('studioCamera1'):
             pm.delete('studioCamera1')
 
-        self.camera = pm.camera(n="studioCamera1", position=(0, 4, 8), aspectRatio=0.66, )
+        self.camera = pm.camera(n="studioCamera1", position=(0, 4, 16), aspectRatio=0.66, fl=35)
         self.add_camera_widget()
         self.btn_add_cam.setEnabled(False)  # setText("Reset camera")
 

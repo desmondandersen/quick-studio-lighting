@@ -1,10 +1,11 @@
 # Quick Studio Lighting
 
+![Example of using this script in Maya 2023](./example.png)
+
 ### Description
 
-Python script to quickly create a three-point lighting set-up for rendering objects in Maya.
-
-(Requires: Python3, Pymel, PySide2)
+Want to quickly render your 3D model? Use this python script to quickly create a three-point lighting set-up with a studio-style backdrop in Maya.
+(Requires: pymel, PySide2)
 
 ### Usage
 
